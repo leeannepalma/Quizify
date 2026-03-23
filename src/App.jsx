@@ -102,7 +102,7 @@ ${focusTopics.length ? `Focus on these topics: ${focusTopics.join(", ")}` : ""}
 ${missedConcepts.length ? `IMPORTANT: Include questions about these previously missed concepts to reinforce learning: ${missedConcepts.join("; ")}` : ""}`;
 
   const result = await callAI(system, `Generate a quiz from these notes:\n\n${notes.substring(0, 6000)}`);
- if (!result) return null;
+  if (!result) return null;
   try {
     let cleaned = result.replace(/```json\s?/g, "").replace(/```/g, "").trim();
     const start = cleaned.indexOf("[");
@@ -115,6 +115,8 @@ ${missedConcepts.length ? `IMPORTANT: Include questions about these previously m
     console.error("Parse error:", e, "Raw:", result);
     return null;
   }
+}
+
 async function generateExplanation(question, userAnswer, correctAnswer, mode="normal") {
   const toneMap = { eli5: "Explain like I'm 5 years old. Use simple analogies, everyday examples, and very basic language.", normal: "Give a clear, detailed step-by-step explanation suitable for a student.", detailed: "Provide an extremely thorough academic explanation with examples, edge cases, and related concepts." };
   const system = `You are a patient, encouraging tutor. ${toneMap[mode]} Be concise but thorough. Use plain text only, no markdown.`;
@@ -133,6 +135,7 @@ async function generateFlashcards(notes) {
     if (start !== -1 && end !== -1) cleaned = cleaned.substring(start, end + 1);
     return JSON.parse(cleaned);
   } catch { return null; }
+}
 
 async function askFollowUp(question, explanation, followUpQ) {
   const system = "You are a helpful tutor. Answer the student's follow-up question about a quiz question they got wrong. Be clear and encouraging. Plain text only.";
@@ -938,10 +941,22 @@ function FlashcardsPage({ notes }) {
 // ─── Main App ────────────────────────────────────────────────────────────────
 export default function App() {
   const [page, setPage] = useState("home");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(() => {
+    try { return localStorage.getItem("quizify_notes") || ""; } catch { return ""; }
+  });
   const [quizData, setQuizData] = useState(null);
   const [results, setResults] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("quizify_history")) || []; } catch { return []; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("quizify_notes", notes); } catch {}
+  }, [notes]);
+
+  useEffect(() => {
+    try { localStorage.setItem("quizify_history", JSON.stringify(history)); } catch {}
+  }, [history]);
 
   const startQuiz = (data) => { setQuizData(data); setResults(null); setPage("quiz"); };
 
