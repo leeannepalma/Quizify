@@ -7,8 +7,13 @@ export default async function handler(req, res) {
     const { system, messages } = req.body;
     const userMessage = messages?.[0]?.content || "";
 
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "No API key configured" });
+    }
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -21,13 +26,24 @@ export default async function handler(req, res) {
     );
 
     const data = await response.json();
+
+    if (data.error) {
+      console.error("Gemini error:", JSON.stringify(data.error));
+      return res.status(500).json({ error: data.error.message, details: data.error });
+    }
+
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    if (!text) {
+      console.error("Empty response from Gemini. Full response:", JSON.stringify(data));
+      return res.status(500).json({ error: "Empty response", fullResponse: data });
+    }
 
     res.status(200).json({
       content: [{ type: "text", text }],
     });
   } catch (error) {
     console.error("API error:", error);
-    res.status(500).json({ error: "API call failed" });
+    res.status(500).json({ error: error.message });
   }
 }
