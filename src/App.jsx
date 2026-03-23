@@ -67,16 +67,12 @@ const Icon = ({ name, size=20, color=T.textMd }) => {
 // ─── AI API Call ─────────────────────────────────────────────────────────────
 async function callAI(systemPrompt, userPrompt) {
   try {
-    const r = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
-    });
-    const data = await r.json();
-    return data.content?.map(b => b.text || "").join("\n") || "";
+    const response = await puter.ai.chat(
+      `${systemPrompt}\n\nUser: ${userPrompt}`,
+      { model: "google/gemini-2.0-flash-exp" }
+    );
+    const text = typeof response === "string" ? response : response?.message?.content || "";
+    return text;
   } catch (e) {
     console.error("AI call failed:", e);
     return null;
