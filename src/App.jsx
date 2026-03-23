@@ -102,13 +102,19 @@ ${focusTopics.length ? `Focus on these topics: ${focusTopics.join(", ")}` : ""}
 ${missedConcepts.length ? `IMPORTANT: Include questions about these previously missed concepts to reinforce learning: ${missedConcepts.join("; ")}` : ""}`;
 
   const result = await callAI(system, `Generate a quiz from these notes:\n\n${notes.substring(0, 6000)}`);
-  if (!result) return null;
+ if (!result) return null;
   try {
-    const cleaned = result.replace(/```json\s?|```/g, "").trim();
+    let cleaned = result.replace(/```json\s?/g, "").replace(/```/g, "").trim();
+    const start = cleaned.indexOf("[");
+    const end = cleaned.lastIndexOf("]");
+    if (start !== -1 && end !== -1) {
+      cleaned = cleaned.substring(start, end + 1);
+    }
     return JSON.parse(cleaned);
-  } catch { return null; }
-}
-
+  } catch (e) {
+    console.error("Parse error:", e, "Raw:", result);
+    return null;
+  }
 async function generateExplanation(question, userAnswer, correctAnswer, mode="normal") {
   const toneMap = { eli5: "Explain like I'm 5 years old. Use simple analogies, everyday examples, and very basic language.", normal: "Give a clear, detailed step-by-step explanation suitable for a student.", detailed: "Provide an extremely thorough academic explanation with examples, edge cases, and related concepts." };
   const system = `You are a patient, encouraging tutor. ${toneMap[mode]} Be concise but thorough. Use plain text only, no markdown.`;
@@ -120,8 +126,13 @@ async function generateFlashcards(notes) {
   const system = `You are a study aid. Generate flashcards from notes. RESPOND ONLY with valid JSON array (no markdown, no backticks). Each element: {"front":"question/term","back":"answer/definition","topic":"tag"}. Generate 10-15 flashcards covering key concepts.`;
   const result = await callAI(system, `Create flashcards from:\n\n${notes.substring(0, 5000)}`);
   if (!result) return null;
-  try { return JSON.parse(result.replace(/```json\s?|```/g, "").trim()); } catch { return null; }
-}
+  try {
+    let cleaned = result.replace(/```json\s?/g, "").replace(/```/g, "").trim();
+    const start = cleaned.indexOf("[");
+    const end = cleaned.lastIndexOf("]");
+    if (start !== -1 && end !== -1) cleaned = cleaned.substring(start, end + 1);
+    return JSON.parse(cleaned);
+  } catch { return null; }
 
 async function askFollowUp(question, explanation, followUpQ) {
   const system = "You are a helpful tutor. Answer the student's follow-up question about a quiz question they got wrong. Be clear and encouraging. Plain text only.";
