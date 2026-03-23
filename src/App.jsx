@@ -69,7 +69,7 @@ async function callAI(systemPrompt, userPrompt) {
   try {
     const response = await puter.ai.chat(
       `${systemPrompt}\n\nUser: ${userPrompt}`,
-      { model: "google/gemini-2.0-flash-exp" }
+      { model: "gpt-4o-mini" }
     );
     const text = typeof response === "string" ? response : response?.message?.content || "";
     return text;
